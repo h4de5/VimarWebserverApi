@@ -1,8 +1,14 @@
 <?php
 namespace Pnet\Bus;
 
-use Pnet\Bus\BusStatus; 
+use Pnet\Bus\BusStatus;
 
+/**
+ * BusElement
+ * Each actor as well as each room is a BusElement
+ * it has ID, name, type and can have BusElements as childs
+ *
+ */
 class BusElement implements \Iterator, \ArrayAccess {
 	public $id;
 	public $name;
@@ -13,6 +19,16 @@ class BusElement implements \Iterator, \ArrayAccess {
 
 	private $position = 0;
 
+	/**
+	 * create a new BusElement
+	 *
+	 * @param [type] $id
+	 * @param [type] $name
+	 * @param [type] $type
+	 * @param [type] $values_type
+	 * @param array $childs
+	 * @param array $status
+	 */
 	function __construct($id, $name, $type, $values_type, $childs = array(), $status = array()) {
 		$this->id = $id;
 		$this->name = $name;
@@ -51,7 +67,7 @@ class BusElement implements \Iterator, \ArrayAccess {
 		foreach ($this->status as $idx => $status) {
 			if($status->type == $statusname) {
 				return $status;
-			} 
+			}
 		}
 		return null;
 	}
@@ -117,13 +133,13 @@ class BusElement implements \Iterator, \ArrayAccess {
 
 	############################### DEBUG ###############################
 	public function __toString() {
-		$ret = '#'. $this->id .' '. $this->name 
+		$ret = '#'. $this->id .' '. $this->name
 			.' ('. $this->type .')';
-			
+
 		if(count($this->childs) > 0) {
 			$ret .= ' - '. count($this->childs) .' child'.(count($this->childs) > 1 ? 's' : '');
 		}
-		
+
 		if(count($this->status) > 0) {
 			//$val = reset($this->status);
 			//$key = key($this->status);
@@ -135,7 +151,7 @@ class BusElement implements \Iterator, \ArrayAccess {
 
 	public function __debugInfo() {
 		$ret = [
-			'element' => '#'. $this->id .' '. $this->name 
+			'element' => '#'. $this->id .' '. $this->name
 			.' ('. $this->type .')']
 		;
 		if(count($this->childs) > 0) {

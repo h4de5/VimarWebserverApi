@@ -22,7 +22,7 @@ $com = new Communicate($host, $user, $password);
 
 if(!empty($_COOKIE['session'])) {
 	$com->setSessionId($_COOKIE['session']);
-} 
+}
 
 $com->getUser();
 
@@ -73,7 +73,9 @@ if(isset($_GET['ajax'])) {
 	exit(0);
 }
 
-//$com->queryGetTableInfo();
+echo "<pre>";
+$com->queryGetTableInfo();
+echo "</pre>";
 
 
 //$com->getObjectList();
@@ -85,16 +87,14 @@ if(isset($_GET['ajax'])) {
 // array darstellen
 // regelmäßig auf updates prüfen
 // auf knopfdruck reagieren und ein und ausschalten
-// gruppen definieren: pro gerät, pro stockwerk, 
-// 
-
-$result = $com->getObjectList();
-//echo Render::generateResultTable($result);
+// gruppen definieren: pro gerät, pro stockwerk,
+//
 
 
-$com->buildBusProject($result);
-
-$elements = $com->getBusElements();
+// $result = $com->getObjectList();
+// //echo Render::generateResultTable($result);
+// $com->buildBusProject($result);
+// $elements = $com->getBusElements();
 
 /*
 echo '<pre>';
@@ -105,11 +105,11 @@ var_dump($elements);
 echo '</pre>';
 */
 
-$result = $com->getValue(array_keys($elements));
-//echo Render::generateResultTable($result);
 
+// $result = $com->getValue(array_keys($elements));
+// //echo Render::generateResultTable($result);
+// $com->updateBusProject($result);
 
-$com->updateBusProject($result);
 
 
 //var_dump($com->getElements());
@@ -146,11 +146,11 @@ $com->setValue(710, 0);
 	</head>
 	<body>
 		<div class="container">
-		<?php 
+		<?php
 
 
 echo Render::generateElementList($com->getElements());
-	
+
 
 		?>
 		</div>

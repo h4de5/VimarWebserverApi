@@ -111,7 +111,7 @@ class Communicate {
 		$headers = [
 			'SOAPAction' => 'dbSoapRequest',
 			'SOAPServer' => '',
-			#'X-Requested-With' => 'XMLHttpRequest',    
+			#'X-Requested-With' => 'XMLHttpRequest',
 			'Content-Type' => 'text/xml; charset="UTF-8"',
 			// needs to be set to overcome: 'Expect' => '100-continue' header
 			// otherwise header and payload is send in two requests if payload is bigger then 1024byte
@@ -160,14 +160,22 @@ class Communicate {
 	}
 
 	/**
-	 * executes a SQL Query on the bus webserver, parses the xml results 
+	 * executes a SQL Query on the bus webserver, parses the xml results
 	 * and returns an associative array
 	 * @param string $select SQL Query
 	 * @return array        SQL result, null if faulty
 	 */
 	public function querySQL($select) {
-		
+
 		$post_t = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-databasesocketoperation xmlns="urn:xmethods-dpadws"><payload>NO-PAYLOAD</payload><hashcode>NO-HASCHODE</hashcode><optionals>NO-OPTIONAL</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>%s</sessionid><waittime>5</waittime><function>DML-SQL</function><type>SELECT</type><statement>%s</statement><statement-len>%d</statement-len></service-databasesocketoperation></soapenv:Body></soapenv:Envelope>';
+
+		// to update element (send command to shades)
+		// $post_t = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-runonelement xmlns="urn:xmethods-dpadws"><payload>0</payload><hashcode>NO-HASHCODE</hashcode><optionals>NO-OPTIONALS</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>%s</sessionid><waittime>10</waittime><idobject>730</idobject><operation>SETVALUE</operation></service-runonelement></soapenv:Body></soapenv:Envelope>
+		// start/stop dimmer
+		// <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-runonelement xmlns="urn:xmethods-dpadws"><payload>1</payload><hashcode>NO-HASHCODE</hashcode><optionals>NO-OPTIONALS</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>5b8bd7b958093</sessionid><waittime>10</waittime><idobject>710</idobject><operation>SETVALUE</operation></service-runonelement></soapenv:Body></soapenv:Envelope>
+
+		// <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-runonelement xmlns="urn:xmethods-dpadws"><payload>0</payload><hashcode>NO-HASHCODE</hashcode><optionals>NO-OPTIONALS</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>5b8bd7b958093</sessionid><waittime>10</waittime><idobject>710</idobject><operation>SETVALUE</operation></service-runonelement></soapenv:Body></soapenv:Envelope>
+
 
 		$select = trim(str_replace("\n", " ", str_replace(array("'", '"'), '&apos;', $select) ));
 		$post = sprintf($post_t, $this->sessionid, $select, strlen($select));
@@ -194,12 +202,12 @@ class Communicate {
 			$this->sessionid = $xml->sessionid;
 
 			*/
-		
+
 	}
 
 	/**
 	 * getting a complete list of objects
-	 * @param  int $elementid to query a single object 
+	 * @param  int $elementid to query a single object
 	 * @return array        sql result with all available objects
 	 */
 	public function getObject($elementid) {
@@ -208,16 +216,16 @@ class Communicate {
 		// // AND O1.ID = 703
 		$select_t = 'SELECT O1.ID AS PARENTID, O1.NAME AS PARENTNAME, O1.TYPE AS PARENTTYPE, O2.ID AS CHILDID, O2.NAME AS CHILDNAME, O2.TYPE AS CHILDTYPE, O2.STATUS_ID AS CHILDSTATUSID, O2.CURRENT_VALUE AS CHILDSTATUSVALUE, O2.VALUES_TYPE as VALUES_TYPE
 FROM DPADD_OBJECT_RELATION AS REL1
-INNER JOIN DPADD_OBJECT AS O1 ON O1.ID = REL1.CHILDOBJ_ID AND O1.TYPE IN ("GROUP", "BYMEIDX") 
+INNER JOIN DPADD_OBJECT AS O1 ON O1.ID = REL1.CHILDOBJ_ID AND O1.TYPE IN ("GROUP", "BYMEIDX")
 INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND REL2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP", "BYMEIDX") 
+INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP", "BYMEIDX")
 WHERE REL1.PARENTOBJ_ID IN (%d) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION" AND O2.ID = %d
 ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 
 		$select = sprintf($select_t, intval($this->group_id), intval($elementid));
 
 		$result = $this->querySQL($select);
-		
+
 		return $result;
 	}
 
@@ -227,7 +235,7 @@ ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 	 */
 	public function getObjectList() {
 		/*
-		
+
 		// too less, we need more data at once
 		$select_t = 'SELECT D_O.ID AS OBJECT_ID, D_O.NAME AS OBJECT_NAME, D_O.DESCRIPTION AS OBJECT_DESCRIPTION, D_O.TYPE AS OBJECT_TYPE, D_OR.PARENTOBJ_ID AS USERGROUP_ID FROM DPADD_OBJECT AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID) WHERE (D_OR.PARENTOBJ_ID IN (%d) AND D_OR.RELATION_WEB_TIPOLOGY=&apos;USERGROUP_RELATION&apos;) ORDER BY OBJECT_NAME;';
 
@@ -236,10 +244,10 @@ ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 		$select = '
 SELECT O1.ID AS PARENTID, O1.NAME AS PARENTNAME, O1.TYPE AS PARENTTYPE, O2.ID AS CHILDID, O2.NAME AS CHILDNAME, O2.TYPE AS CHILDTYPE, REL3.OPTIONAL, O3.ID AS VALUEID, O3.NAME AS VALUENAME, O3.CURRENT_VALUE, O3.OPTIONALP, O3.IS_REMOTABLE
 FROM DPADD_OBJECT_RELATION AS REL1
-INNER JOIN DPADD_OBJECT AS O1 ON O1.ID = REL1.CHILDOBJ_ID AND O1.TYPE IN ("GROUP", "BYMEIDX") 
+INNER JOIN DPADD_OBJECT AS O1 ON O1.ID = REL1.CHILDOBJ_ID AND O1.TYPE IN ("GROUP", "BYMEIDX")
 INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND REL2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP", "BYMEIDX") 
-INNER JOIN DPADD_OBJECT_RELATION AS REL3 ON O2.ID = REL3.PARENTOBJ_ID AND REL3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION" 
+INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP", "BYMEIDX")
+INNER JOIN DPADD_OBJECT_RELATION AS REL3 ON O2.ID = REL3.PARENTOBJ_ID AND REL3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
 INNER JOIN DPADD_OBJECT AS O3 ON O3.ID = REL3.CHILDOBJ_ID AND O3.IS_REMOTABLE = 1
 WHERE REL1.PARENTOBJ_ID IN (20) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION" AND O2.ID = 704 AND O1.ID = 703;
 ';
@@ -249,16 +257,16 @@ WHERE REL1.PARENTOBJ_ID IN (20) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATI
 		// // AND O1.ID = 703
 		$select_t = 'SELECT O1.ID AS PARENTID, O1.NAME AS PARENTNAME, O1.TYPE AS PARENTTYPE, O2.ID AS CHILDID, O2.NAME AS CHILDNAME, O2.TYPE AS CHILDTYPE, O2.STATUS_ID AS CHILDSTATUSID, O2.CURRENT_VALUE AS CHILDSTATUSVALUE, O2.VALUES_TYPE as VALUES_TYPE
 FROM DPADD_OBJECT_RELATION AS REL1
-INNER JOIN DPADD_OBJECT AS O1 ON O1.ID = REL1.CHILDOBJ_ID AND O1.TYPE IN ("GROUP", "BYMEIDX") 
+INNER JOIN DPADD_OBJECT AS O1 ON O1.ID = REL1.CHILDOBJ_ID AND O1.TYPE IN ("GROUP", "BYMEIDX")
 INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND REL2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP", "BYMEIDX") 
-WHERE REL1.PARENTOBJ_ID IN (%d) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION" 
+INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP", "BYMEIDX")
+WHERE REL1.PARENTOBJ_ID IN (%d) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION"
 ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 
 		$select = sprintf($select_t, intval($this->group_id));
 
 		$result = $this->querySQL($select);
-		
+
 		return $result;
 	}
 
@@ -305,9 +313,9 @@ ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 			// O2.IS_REMOTABLE = 1 .. rollladen have is_remoteable = 0
 			// AND O2.OPTIONALP != ""
 		$select_t = 'SELECT O1.ID AS PARENTID, O1.NAME AS PARENTNAME, O1.TYPE AS PARENTTYPE, REL2.OPTIONAL, O2.ID as VALUEID, O2.NAME as VALUENAME, O2.CURRENT_VALUE, O2.OPTIONALP, O2.IS_REMOTABLE
-FROM DPADD_OBJECT AS O1 
+FROM DPADD_OBJECT AS O1
 INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
-INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE = "BYMEOBJ" 
+INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE = "BYMEOBJ"
 WHERE O1.ID in (%s)
 ORDER BY PARENTID;
 ';
@@ -320,7 +328,7 @@ ORDER BY PARENTID;
 
 		// AND O2.NAME = "on/off" .. 1 an, 0 aus
 		// AND O2.NAME = "value" .. xx% stärke vom dimmer
-		
+
 		return $result;
 	}
 
@@ -340,7 +348,7 @@ ORDER BY PARENTID;
 				if(!isset($this->elements[$row['PARENTID']])) {
 					echo "ERROR: status for unknown element received: ". $row['PARENTID'] . ': '. print_r($row, true)."\n";
 					continue;
-				} 
+				}
 
 				// if this si a new status, create a status object
 				if(!isset($this->elements[$row['PARENTID']][$row['VALUEID']])) {
@@ -361,11 +369,11 @@ ORDER BY PARENTID;
 	/**
 	 * only returns those elements who can have a status queried
 	 * TODO: check if key is still there
-	 * TODO: check if arrayAccess is used here, or iterator 
+	 * TODO: check if arrayAccess is used here, or iterator
 	 * @return array part of elements array
 	 */
 	public function getBusElements() {
-		return array_filter ( $this->elements, 
+		return array_filter ( $this->elements,
 			function($element, $key) {
 				return $element->type == 'BYMEIDX';
 			}, ARRAY_FILTER_USE_BOTH
@@ -383,6 +391,7 @@ ORDER BY PARENTID;
 	 */
 	public function queryGetTableInfo() {
 
+		$showtables_t = 'SHOW TABLES LIKE \'%s\'';
 		$createtable_t = 'PRAGMA table_info(%s);';
 		$select_t = 'SELECT %s FROM %s';
 
@@ -390,12 +399,18 @@ ORDER BY PARENTID;
 
 		//$tables = ['DPADD_OBJECT'];
 
+		$showtables = sprintf($showtables_t, "%DPADD%");
+		echo $showtables;
+		$showtables_result = $this->querySQL($showtables);
+		print_r($showtables_result);
+		return;
+
 		foreach ($tables as $idx => $table) {
 			// create table statement
 			$createtable = sprintf($createtable_t, $table);
 			$fieldlist_result = $this->querySQL($createtable);
 			$createtable = $this->generateCreateTable($table, $fieldlist_result);
-			
+
 			echo $createtable;
 
 			// get list of fields
@@ -403,16 +418,16 @@ ORDER BY PARENTID;
 				return $row['name'];
 			}, $fieldlist_result);
 
-			// query each field from $table 
+			// query each field from $table
 			$select = sprintf($select_t, implode(", ", $fieldlist), $table);
 			//$select = sprintf($select_t, '*', $table);
 			//var_dump($select);
 			$result = $this->querySQL($select); //. " limit 186, 2");
 			//var_dump($result);
 
-			// generate sql inserts 
+			// generate sql inserts
 			$insert = $this->generateInserts($table, $result);
-			
+
 			echo $insert;
 			echo "\n\n";
 		}
@@ -434,49 +449,49 @@ ORDER BY PARENTID;
 		$createfield_t = "  %s %s %s %s, \n";
 		$createfields = "";
 		$keys = "";
-		
+
 		foreach ($tableinfo as $idx => $rowdef) {
 
 			// reset
 			$name = $default = $type = $null = '';
 
 			$name = trim($rowdef['name']);
-			
 
-			if($rowdef['type'] == 'INTEGER') { 
+
+			if($rowdef['type'] == 'INTEGER') {
 				$type = "int(11)";
 
 				if($rowdef['dflt_value'] !== '') {
 					$default = 'DEFAULT '. intval($rowdef['dflt_value']);
 				}
-			} else if($rowdef['type'] == 'INTEGER(1)') { 
+			} else if($rowdef['type'] == 'INTEGER(1)') {
 				$type = "tinyint(4)";
 
 				if($rowdef['dflt_value'] !== '') {
 					$default = 'DEFAULT '. intval($rowdef['dflt_value']);
 				}
 			}
-			
-			else if($rowdef['type'] == 'STRING') { 
+
+			else if($rowdef['type'] == 'STRING') {
 				$type = "varchar(100)";
 				$default = "DEFAULT '". addslashes($rowdef['dflt_value']) ."'";
 			}
-			else if($rowdef['type'] == 'TEXT') { 
+			else if($rowdef['type'] == 'TEXT') {
 				$type = "VARCHAR(1000)";
 				$default = "DEFAULT '". addslashes($rowdef['dflt_value']) ."'";
 			}
 
 			if(!empty($rowdef['notnull'])) { $null = "NOT NULL"; }
 
-			if(!empty($rowdef['pk'])) { 
-				$default = "AUTO_INCREMENT"; 
+			if(!empty($rowdef['pk'])) {
+				$default = "AUTO_INCREMENT";
 				//$keys = " PRIMARY KEY (`$name`)";
 				$keys = "   PRIMARY KEY ($name)";
 			}
 
 			if(substr($name, -3) === '_ID' && $rowdef['type'] !== 'TEXT') {
 				$keys .= ",
-	KEY ($name)";   
+	KEY ($name)";
 			}
 
 			$createfields .= sprintf($createfield_t, $name, $type, $null, $default);
@@ -512,7 +527,7 @@ CREATE TABLE IF NOT EXISTS %s (
 		 */
 		$insert_t = "INSERT INTO %s
 (%s)
-VALUES 
+VALUES
 %s;";
 		$value_array = [];
 		//var_dump($selectinfo);
@@ -532,9 +547,9 @@ VALUES
 		}
 
 		$fieldlist = array_keys($selectinfo[0]);
-		$insert = sprintf($insert_t, 
-			$tablename, 
-			implode(", ", $fieldlist), 
+		$insert = sprintf($insert_t,
+			$tablename,
+			implode(", ", $fieldlist),
 			implode(",\n", $value_array)
 		);
 
