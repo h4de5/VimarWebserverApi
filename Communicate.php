@@ -14,6 +14,20 @@ class Communicate {
 	protected $group_id = null;
 	protected $user_id = null;
 
+	/**
+	 * @return null
+	 */
+	public function getUserId() {
+		return $this->user_id;
+	}
+
+	/**
+	 * @param null $user_id
+	 */
+	public function setUserId($user_id): void {
+		$this->user_id = $user_id;
+	}
+
 	protected $elements = array();
 
 	/**
@@ -99,9 +113,9 @@ class Communicate {
 
 	/**
 	 * send a request including payload to the webserver
-	 * @param  $array $post the payload as xml
-	 * @return $array       curl result as array, check for $result['body'] for content
-	 * @throws Exception if curl request was faulty
+	 * @param  array $post the payload as xml
+	 * @return array       curl result as array, check for $result['body'] for content
+	 * @throws \Exception if curl request was faulty
 	 */
 	protected function sendToWebserver($post) {
 		$url_t = 'https://%s/cgi-bin/dpadws';
@@ -136,6 +150,8 @@ class Communicate {
 	 * sets a value for a given bus object
 	 * @param integer $objectid id of bus object
 	 * @param string $value    value to be set, 1/0 for switches, 0-100 for dimmer, etc
+	 * @throws \Exception
+	 * @return array
 	 */
 	public function setValue($objectid, $value) {
 		$post_t = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-runonelement xmlns="urn:xmethods-dpadws"><payload>%d</payload><hashcode>NO-HASHCODE</hashcode><optionals>NO-OPTIONALS</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>%s</sessionid><waittime>10</waittime><idobject>%d</idobject><operation>SETVALUE</operation></service-runonelement></soapenv:Body></soapenv:Envelope>';
@@ -149,8 +165,8 @@ class Communicate {
 			$payload = $xml->xpath('//payload')[0];
 			$query_result = Utils::parseSQLPayload($payload);
 		} else {
-			echo "\n".'Query Result empty for: '.  $select ."\n";
-			echo "\n Length: ". strlen($select) ."\n";
+			echo "\n".'Query Result empty for: '.  $post ."\n";
+			echo "\n Length: ". strlen($post) ."\n";
 			echo "\n post: ". htmlentities($post) . "\n";
 			echo '>- '. print_r(htmlentities($result['body']), true) .'-<';
 			$query_result = null;

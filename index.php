@@ -26,7 +26,7 @@ if(!empty($_COOKIE['session'])) {
 
 $com->getUser();
 
-if(empty($com->user_id)) {
+if(empty($com->getUserId())) {
 	$com->login();
 	$session = $com->getSessionId();
 	if(!empty($session)) {
