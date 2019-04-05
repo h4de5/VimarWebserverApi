@@ -73,12 +73,12 @@ if(isset($_GET['ajax'])) {
 	exit(0);
 }
 
-echo "<pre>";
-$com->queryGetTableInfo();
-echo "</pre>";
+// echo "<pre>";
+// $com->queryGetTableInfo();
+// echo "</pre>";
 
 
-//$com->getObjectList();
+// $com->getObjectList();
 //
 // Ziel:
 // einloggen: user ID bekommen
@@ -91,10 +91,10 @@ echo "</pre>";
 //
 
 
-// $result = $com->getObjectList();
-// //echo Render::generateResultTable($result);
-// $com->buildBusProject($result);
-// $elements = $com->getBusElements();
+$result = $com->getObjectList();
+//echo Render::generateResultTable($result);
+$com->buildBusProject($result);
+$elements = $com->getBusElements();
 
 /*
 echo '<pre>';
