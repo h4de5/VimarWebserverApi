@@ -11,7 +11,7 @@ class Utils {
 	 * @return array/false           array representation, false if empty, null if not parseable
 	 */
 	public static function xml2array($xmlString) {
-		
+
 		$xml = null;
 		if(empty($xmlString)) {
 			echo 'Given empty XML String to xml2array.';
@@ -39,7 +39,7 @@ class Utils {
 
 		libxml_clear_errors();
 		libxml_use_internal_errors($use_errors);
-		
+
 
 		return $xml;
 
@@ -93,7 +93,7 @@ class Utils {
 		$header = array_shift($lines);
 
 		// put headers as index for array
-		array_walk($lines,array(self, 'combine_array'), $header);
+		array_walk($lines,'self::combine_array', $header);
 
 		// return array
 		$result = $lines;

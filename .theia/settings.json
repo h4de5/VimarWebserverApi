@@ -1,0 +1,5 @@
+{
+   "editor.wordSeparators": "`~!@#%^&*()-=+[{]}\\|;:'\",.<>/",
+   "editor.tabSize": 2,
+   "php.trace.server": "messages"
+}

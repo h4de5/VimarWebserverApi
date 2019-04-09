@@ -19,9 +19,9 @@ class BusStatus {
 	}
 
 	############################### DEBUG ###############################
-	
+
 	public function __toString() {
-		$ret = '#'. $this->id .' '. $this->type 
+		$ret = '#'. $this->id .' '. $this->type
 			.': '. $this->value;
 		return $ret;
 	}

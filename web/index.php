@@ -1,30 +1,48 @@
 <?php
+
 namespace Pnet\Bus;
 
-use Pnet\Bus\Curl;
 use Pnet\Bus\Communicate;
 use Pnet\Bus\Render;
 
-require_once "ClassAutoloader.php";
-$autoloader = new ClassAutoloader();
+require rtrim(realpath(__DIR__ . '/../lib'), '\\/').'/ClassAutoloader.php';
 
+$autoloader = new ClassAutoloader();
 
 //header('Content-Type: text/html; charset=utf-8');
 setlocale(LC_ALL, "de_DE");
+ini_set('assert.exception', 1);
 
-$config = parse_ini_file("config.ini", true);
+$config = parse_ini_file("../config.ini", true);
 $host = $config["authentication"]["host"];
 $user = $config["authentication"]["user"];
 $password = $config["authentication"]["password"];
 
+assert(
+	!empty($host),
+	new \AssertionError("Missing host setting in configuration - check config.ini")
+);
+assert(
+	!empty($user),
+	new \AssertionError("Missing user setting in configuration - check config.ini")
+);
+assert(
+	!empty($password),
+	new \AssertionError("Missing password setting in configuration - check config.ini")
+);
+
 //echo '<pre>';
 $com = new Communicate($host, $user, $password);
+
 
 if(!empty($_COOKIE['session'])) {
 	$com->setSessionId($_COOKIE['session']);
 }
 
+
 $com->getUser();
+
+
 
 if(empty($com->getUserId())) {
 	$com->login();
