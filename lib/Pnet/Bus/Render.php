@@ -17,7 +17,7 @@ class Render {
 
 		$rows = [];
 		//var_dump($selectinfo);
-		
+
 		if(!empty($selectinfo)) {
 			foreach ($selectinfo as $idx => $value_row) {
 				$row = array_map(function($value) {
@@ -36,8 +36,8 @@ class Render {
 			$rows = [];
 		}
 
-		$table = sprintf($table_t, 
-			implode("", $headline), 
+		$table = sprintf($table_t,
+			implode("", $headline),
 			implode("\n", $rows)
 		);
 
@@ -80,10 +80,10 @@ class Render {
 				  <span class="glyphicon glyphicon-%s"></span> %s
 				</a>';
 		}
-			
+
 		/*
 			button-color (on/off),
-			elementid, 
+			elementid,
 			statusid (on/off), value (on/off),
 			statusid (value), value (value),
 			icon, name
@@ -96,7 +96,7 @@ class Render {
 
 
 			<div class="inner">
-				<button type="button" value="element_%d" class="btn btn-%s">%s <span class="badge">%s</span></button> 
+				<button type="button" value="element_%d" class="btn btn-%s">%s <span class="badge">%s</span></button>
 			</div>
 		*/
 
@@ -122,7 +122,7 @@ class Render {
 
 		$row_r = '<div class="row">%s</div>
 		';
- 
+
 		$result = '';
 		$divs = [];
 

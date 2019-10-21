@@ -40,7 +40,6 @@ class Utils {
 		libxml_clear_errors();
 		libxml_use_internal_errors($use_errors);
 
-
 		return $xml;
 
 		// TOdO - xml repsonse from soap geht ned gscheit decodieren ..

@@ -11,7 +11,8 @@ class Communicate {
 	protected $sessionid = null;
 	protected $host, $user, $password;
 
-	protected $group_id = null;
+	protected $group_ids = null;
+	protected $main_group_ids = null;
 	protected $user_id = null;
 
 	/**
@@ -86,23 +87,112 @@ class Communicate {
 		}
 	}
 
-	/**
-	 * reads out userdata (id, group and name) for a given name
-	 * instance user_id, group_id and name are set within method call
-	 * @return array sql result from login as array
-	 */
-	public function getUser() {
-		// passwort mit: MSP
-		$select_t = 'SELECT D_O.ID AS USER_ID, D_O.NAME AS USER_NAME, D_O.DESCRIPTION AS USER_DESCRIPTION,D_O.TYPE AS USER_TYPE, D_O.OPTIONALP AS OPTIONALP,D_OR.PARENTOBJ_ID AS USERGROUP_ID FROM DPADD_OBJECT AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID) WHERE (D_O.TYPE=&apos;USER&apos; AND D_O.NAME=&apos;%s&apos; AND D_OR.RELATION_WEB_TIPOLOGY=&apos;USERGROUP_RELATION&apos;) ORDER BY USER_NAME;';
-		$select = sprintf($select_t, $this->user);
+	public function getMainGroupIds() {
+		$select_t = 'SELECT GROUP_CONCAT(o1.id) as MAIN_GROUPS FROM DPADD_OBJECT o0
+INNER JOIN DPADD_OBJECT_RELATION r1 ON o0.ID = r1.PARENTOBJ_ID AND r1.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+INNER JOIN DPADD_OBJECT o1 ON r1.CHILDOBJ_ID = o1.ID AND o1.type = "GROUP"
+WHERE o0.NAME = "_DPAD_DBCONSTANT_GROUP_MAIN";';
 
+		$select = sprintf($select_t);
 		$result = $this->querySQL($select);
+
+		var_dump($result);
 		// only first line
 		$result = $result[0];
 
 
-		// set default user group
-		$this->group_id = $result['USERGROUP_ID'];
+
+		// set main groups
+		$this->main_group_ids = $result['MAIN_GROUPS'];
+
+		return $result;
+	}
+
+	public function loadElements() {
+		// THIS IS STILL TOO MUCH !!
+// 		$select_t = 'SELECT DISTINCT o2.ID AS object_id, o2.NAME AS object_name, o2.IMAGE_PATH AS object_image,
+// r3.order_num AS status_order, o3.ID AS status_id, o3.NAME AS status_name, o3.DESCRIPTION AS status_description, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range, o3.IS_REMOTABLE AS status_changeable
+// FROM DPADD_OBJECT_RELATION r2
+// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
+// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
+// WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+// ORDER BY object_name, status_order ;';
+
+// geht a ned ! killed webserver
+// $select_t = 'SELECT GROUP_CONCAT(r2.PARENTOBJ_ID) AS room_ids, o2.ID AS object_id, o2.NAME AS object_name,
+// o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range
+// FROM DPADD_OBJECT_RELATION r2
+// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
+// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
+// WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+// GROUP BY object_id, object_name, status_id, status_name, status_value, status_range
+// ORDER BY object_name;';
+
+		$select_t = 'SELECT r2.PARENTOBJ_ID as room_id, o2.ID AS object_id, o2.NAME AS object_name,
+o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range
+FROM DPADD_OBJECT_RELATION r2
+INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
+INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
+WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+ORDER BY object_name;';
+
+		$select = sprintf($select_t, $this->main_group_ids);
+
+		$elementlist = $this->querySQL($select);
+
+
+
+		if(!empty($elementlist)) {
+			foreach ($elementlist as $idx => $row) {
+				var_dump($row);
+
+				// // current rows parentid is not yet in the projects list, add it
+				// if(!isset($this->elements[$row['PARENTID']])) {
+				// 	$element = new BusElement($row['PARENTID'], $row['PARENTNAME'], $row['PARENTTYPE'], $row['VALUES_TYPE']);
+				// 	$this->elements[$row['PARENTID']] = &$element;
+				// } /*else {
+				// 	$element = $this->elements[$row['PARENTID']];
+				// }*/
+
+				// if(!isset($this->elements[$row['CHILDID']])) {
+				// 	$child = new BusElement($row['CHILDID'], $row['CHILDNAME'], $row['CHILDTYPE'], $row['VALUES_TYPE']);
+				// 	$this->elements[$row['PARENTID']]->addChild($child);
+				// 	$this->elements[$row['CHILDID']] = $child;
+				// } /*else {
+				// 	$element = $this->elements[$row['CHILDID']];
+				// }*/
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * reads out userdata (id, group and name) for a given name
+	 * instance user_id, group_ids and name are set within method call
+	 * @return array sql result from login as array
+	 */
+	public function getUser() {
+		// passwort mit: MSP
+		// $select_t = 'SELECT D_O.ID AS USER_ID, D_O.NAME AS USER_NAME, D_O.DESCRIPTION AS USER_DESCRIPTION,D_O.TYPE AS USER_TYPE, D_O.OPTIONALP AS OPTIONALP,D_OR.PARENTOBJ_ID AS USERGROUP_ID FROM DPADD_OBJECT AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID) WHERE (D_O.TYPE="USER" AND D_O.NAME="%s" AND D_OR.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION") ORDER BY USER_NAME;';
+
+		$select_t = 'SELECT D_O.ID AS USER_ID, D_O.NAME AS USER_NAME, GROUP_CONCAT(D_OR.PARENTOBJ_ID) AS USERGROUP_ID
+FROM DPADD_OBJECT AS D_O
+INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID)
+WHERE (D_O.TYPE="USER" AND D_O.NAME="%s" AND D_OR.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION")
+GROUP BY USER_ID, USER_NAME
+ORDER BY USER_NAME;';
+
+		$select = sprintf($select_t, $this->user);
+		$result = $this->querySQL($select);
+		// only first line
+		$result = $result[0];
+
+		// set default user group (can have multible user groups)
+		$this->group_ids = $result['USERGROUP_ID'];
 		// set user_id
 		$this->user_id = $result['USER_ID'];
 		// reset username
@@ -154,9 +244,10 @@ class Communicate {
 	 * @return array
 	 */
 	public function setValue($objectid, $value) {
-		$post_t = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-runonelement xmlns="urn:xmethods-dpadws"><payload>%d</payload><hashcode>NO-HASHCODE</hashcode><optionals>NO-OPTIONALS</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>%s</sessionid><waittime>10</waittime><idobject>%d</idobject><operation>SETVALUE</operation></service-runonelement></soapenv:Body></soapenv:Envelope>';
+		$post_t = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-runonelement xmlns="urn:xmethods-dpadws"><payload>%d</payload><hashcode>NO-HASHCODE</hashcode><optionals>NO-OPTIONALS</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>%s</sessionid><waittime>10</waittime><idobject>%d</idobject><operation>SETVALUE</operation></service-runonelement></soapenv:Body></soapenv:Envelope>
+		';
 
-		$post = sprintf($post_t, $value, $this->sessionid, $objectid);
+		$post = trim(sprintf($post_t, $value, $this->sessionid, $objectid));
 
 		$result = $this->sendToWebserver($post);
 
@@ -183,6 +274,31 @@ class Communicate {
 	 */
 	public function querySQL($select) {
 
+/*
+SELECT D_O.ID AS USER_ID, D_O.NAME AS USER_NAME, D_O.DESCRIPTION AS USER_DESCRIPTION,D_O.TYPE AS USER_TYPE, D_O.OPTIONALP AS OPTIONALP,D_OR.PARENTOBJ_ID AS USERGROUP_ID FROM DPADD_OBJECT  AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID) WHERE (D_O.TYPE='USER' AND D_O.NAME='Admin' AND D_OR.RELATION_WEB_TIPOLOGY='USERGROUP_RELATION') ORDER BY USER_NAME;
+
+SELECT D_O.ID AS OBJECT_ID, D_O.NAME AS OBJECT_NAME, D_O.DESCRIPTION AS OBJECT_DESCRIPTION, D_O.TYPE AS OBJECT_TYPE, D_OR.PARENTOBJ_ID AS USERGROUP_ID FROM DPADD_OBJECT AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID) WHERE (D_OR.PARENTOBJ_ID IN (18,20,194) AND D_OR.RELATION_WEB_TIPOLOGY='USERGROUP_RELATION') ORDER BY OBJECT_NAME;
+
+SELECT D_O.ID AS PERMISSION_ID, D_O.MSP AS PERMISSION_TAG, D_OR.CHILDOBJ_ID AS USERGROUP_ID, D_OR.ACTION_VALUE AS PERMISSION_VALUE FROM DPADD_OBJECT  AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.PARENTOBJ_ID) WHERE (D_O.TYPE='USERPERMISSION' AND D_OR.CHILDOBJ_ID IN (18,20,194) ) ORDER BY PERMISSION_TAG;
+
+SELECT D_O.*,D_WP.IS_EVENT AS IS_EVENT,D_WP.IS_EXECUTABLE AS IS_EXECUTABLE FROM DPADD_OBJECT AS D_O LEFT JOIN (SELECT CLASSNAME,IS_EVENT,IS_EXECUTABLE FROM DPAD_WEB_PHPCLASS) AS D_WP ON (D_O.PHPCLASS=D_WP.CLASSNAME) WHERE D_O.NAME='_DPAD_PRODUCT_VIMARBYME_ADMINISTRATION_LANGUAGE_INIT_TRIGGER' ORDER BY ID ASC;
+
+SELECT D_O.*,D_WP.IS_EVENT AS IS_EVENT,D_WP.IS_EXECUTABLE AS IS_EXECUTABLE FROM DPADD_OBJECT AS D_O LEFT JOIN (SELECT CLASSNAME,IS_EVENT,IS_EXECUTABLE FROM DPAD_WEB_PHPCLASS) AS D_WP ON (D_O.PHPCLASS=D_WP.CLASSNAME) WHERE D_O.NAME='_DPAD_PRODUCT_VIMARBYME_ADMINISTRATION_XML_RELOAD_TRIGGER' ORDER BY ID ASC;
+
+SELECT * FROM DPADD_OBJECT WHERE ID IN (8) ORDER BY ID ;
+
+SELECT * FROM DPADD_OBJECT_RELATION WHERE PARENTOBJ_ID IN (8) OR CHILDOBJ_ID IN (8) ORDER BY ID ;
+
+SELECT * FROM DPADD_OBJECT WHERE ID IN (435,439,454,458,473,494,505,532,579,587,605,613,628,641,649,660,682,690,703,731,739,752,760,794,802,817,828,836,868,883,898,906,921,929,1777,1778) ORDER BY ID ;
+
+SELECT COUNT(ID) AS COUNTER FROM DPADD_OBJECT WHERE TYPE='CAMERA' AND IS_VISIBLE='1' AND OWNED_BY='LOCAL';
+
+SELECT COUNT(D_O.ID) AS COUNTER FROM DPADD_OBJECT AS D_O LEFT JOIN (SELECT CLASSNAME,IS_EVENT,IS_EXECUTABLE FROM DPAD_WEB_PHPCLASS) AS D_WP ON (D_O.PHPCLASS=D_WP.CLASSNAME) WHERE IS_VISIBLE=0 AND D_O.OWNED_BY!='SYSTEM' AND D_O.VALUES_TYPE='CH_SAI' AND D_O.STATUS_ID='-2' ORDER BY ID ASC;
+
+SELECT COUNT(D_O.ID) AS COUNTER FROM DPADD_OBJECT AS D_O LEFT JOIN (SELECT CLASSNAME,IS_EVENT,IS_EXECUTABLE FROM DPAD_WEB_PHPCLASS) AS D_WP ON (D_O.PHPCLASS=D_WP.CLASSNAME) WHERE D_O.TYPE='SAI2_GROUP' ORDER BY ID ASC;
+
+*/
+
 		$post_t = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-databasesocketoperation xmlns="urn:xmethods-dpadws"><payload>NO-PAYLOAD</payload><hashcode>NO-HASCHODE</hashcode><optionals>NO-OPTIONAL</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>%s</sessionid><waittime>5</waittime><function>DML-SQL</function><type>SELECT</type><statement>%s</statement><statement-len>%d</statement-len></service-databasesocketoperation></soapenv:Body></soapenv:Envelope>';
 
 		// to update element (send command to shades)
@@ -193,7 +309,7 @@ class Communicate {
 		// <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-runonelement xmlns="urn:xmethods-dpadws"><payload>0</payload><hashcode>NO-HASHCODE</hashcode><optionals>NO-OPTIONALS</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>5b8bd7b958093</sessionid><waittime>10</waittime><idobject>710</idobject><operation>SETVALUE</operation></service-runonelement></soapenv:Body></soapenv:Envelope>
 
 
-		$select = trim(str_replace("\n", " ", str_replace(array("'", '"'), '&apos;', $select) ));
+		$select = trim(str_replace(array("\r\n","\n"), " ", str_replace(array("'", '"'), '&apos;', $select) ));
 		$post = sprintf($post_t, $this->sessionid, $select, strlen($select));
 
 		$result = $this->sendToWebserver($post);
@@ -218,7 +334,6 @@ class Communicate {
 			$this->sessionid = $xml->sessionid;
 
 			*/
-
 	}
 
 	/**
@@ -230,7 +345,7 @@ class Communicate {
 
 		// just right
 		// // AND O1.ID = 703
-		$select_t = 'SELECT O1.ID AS PARENTID, O1.NAME AS PARENTNAME, O1.TYPE AS PARENTTYPE, O2.ID AS CHILDID, O2.NAME AS CHILDNAME, O2.TYPE AS CHILDTYPE, O2.STATUS_ID AS CHILDSTATUSID, O2.CURRENT_VALUE AS CHILDSTATUSVALUE, O2.VALUES_TYPE as VALUES_TYPE
+		$select_t = 'SELECT DISTINCT O1.ID AS PARENTID, O1.NAME AS PARENTNAME, O1.TYPE AS PARENTTYPE, O2.ID AS CHILDID, O2.NAME AS CHILDNAME, O2.TYPE AS CHILDTYPE, O2.STATUS_ID AS CHILDSTATUSID, O2.CURRENT_VALUE AS CHILDSTATUSVALUE, O2.VALUES_TYPE as VALUES_TYPE
 FROM DPADD_OBJECT_RELATION AS REL1
 INNER JOIN DPADD_OBJECT AS O1 ON O1.ID = REL1.CHILDOBJ_ID AND O1.TYPE IN ("GROUP", "BYMEIDX")
 INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND REL2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
@@ -238,10 +353,8 @@ INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP
 WHERE REL1.PARENTOBJ_ID IN (%d) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION" AND O2.ID = %d
 ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 
-		$select = sprintf($select_t, intval($this->group_id), intval($elementid));
-
+		$select = sprintf($select_t, $this->group_ids, intval($elementid));
 		$result = $this->querySQL($select);
-
 		return $result;
 	}
 
@@ -253,7 +366,7 @@ ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 		/*
 
 		// too less, we need more data at once
-		$select_t = 'SELECT D_O.ID AS OBJECT_ID, D_O.NAME AS OBJECT_NAME, D_O.DESCRIPTION AS OBJECT_DESCRIPTION, D_O.TYPE AS OBJECT_TYPE, D_OR.PARENTOBJ_ID AS USERGROUP_ID FROM DPADD_OBJECT AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID) WHERE (D_OR.PARENTOBJ_ID IN (%d) AND D_OR.RELATION_WEB_TIPOLOGY=&apos;USERGROUP_RELATION&apos;) ORDER BY OBJECT_NAME;';
+		$select_t = 'SELECT D_O.ID AS OBJECT_ID, D_O.NAME AS OBJECT_NAME, D_O.DESCRIPTION AS OBJECT_DESCRIPTION, D_O.TYPE AS OBJECT_TYPE, D_OR.PARENTOBJ_ID AS USERGROUP_ID FROM DPADD_OBJECT AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID) WHERE (D_OR.PARENTOBJ_ID IN (%d) AND D_OR.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION") ORDER BY OBJECT_NAME;';
 
 
 		// Too much, will kill webserver
@@ -267,6 +380,38 @@ INNER JOIN DPADD_OBJECT_RELATION AS REL3 ON O2.ID = REL3.PARENTOBJ_ID AND REL3.R
 INNER JOIN DPADD_OBJECT AS O3 ON O3.ID = REL3.CHILDOBJ_ID AND O3.IS_REMOTABLE = 1
 WHERE REL1.PARENTOBJ_ID IN (20) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION" AND O2.ID = 704 AND O1.ID = 703;
 ';
+
+
+SELECT '#' AS 'o0', o0.ID, o0.NAME, o0.TYPE, '#' AS 'o01', o1.ID, o1.NAME, o1.TYPE, '#' AS 'o2', o2.ID, o2.NAME, o2.TYPE, '#' AS 'o3', o3.ID, o3.NAME, o3.TYPE, '#' AS 'o4', o4.ID, o4.NAME, o4.TYPE, '#' AS 'o5', o5.ID, o5.NAME, o5.TYPE
+FROM DPADD_OBJECT o0
+INNER JOIN DPADD_OBJECT_RELATION r1 ON o0.ID = r1.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o1 ON r1.CHILDOBJ_ID = o1.ID
+LEFT JOIN DPADD_OBJECT_RELATION r2 ON o1.ID = r2.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID
+LEFT JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID
+LEFT JOIN DPADD_OBJECT_RELATION r4 ON o3.ID = r4.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o4 ON r4.CHILDOBJ_ID = o4.ID
+LEFT JOIN DPADD_OBJECT_RELATION r5 ON o4.ID = r5.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o5 ON r5.CHILDOBJ_ID = o5.ID
+WHERE o0.NAME = '_DPAD_DBCONSTANT_GROUP_MAIN';
+
+
+SELECT o1.ID AS level_id, o1.NAME AS level_name, o2.ID AS object_id, o2.NAME AS object_name, o3.ID AS status_id, o3.NAME AS status_name, '#' AS 'o4', o4.ID, o4.NAME, o4.TYPE, '#' AS 'o5', o5.ID, o5.NAME, o5.TYPE
+FROM DPADD_OBJECT o0
+INNER JOIN DPADD_OBJECT_RELATION r1 ON o0.ID = r1.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o1 ON r1.CHILDOBJ_ID = o1.ID AND o1.type = "GROUP"
+LEFT JOIN DPADD_OBJECT_RELATION r2 ON o1.ID = r2.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX"
+LEFT JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = 'BYMEOBJ'
+LEFT JOIN DPADD_OBJECT_RELATION r4 ON o3.ID = r4.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o4 ON r4.CHILDOBJ_ID = o4.ID
+LEFT JOIN DPADD_OBJECT_RELATION r5 ON o4.ID = r5.PARENTOBJ_ID
+LEFT JOIN DPADD_OBJECT o5 ON r5.CHILDOBJ_ID = o5.ID
+WHERE o0.NAME = '_DPAD_DBCONSTANT_GROUP_MAIN';
+
+
 		*/
 
 		// just right
@@ -278,11 +423,22 @@ INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND REL2.R
 INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP", "BYMEIDX")
 WHERE REL1.PARENTOBJ_ID IN (%d) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION"
 ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
+	$select = sprintf($select_t, $this->group_ids);
 
-		$select = sprintf($select_t, intval($this->group_id));
+// $select_t = 'SELECT o1.ID AS PARENTID, o1.NAME AS PARENTNAME, o2.ID AS CHILDID, o2.NAME AS CHILDNAME, o2.IMAGE_PATH AS object_image, o2.VALUES_TYPE as VALUES_TYPE,
+// r3.order_num AS status_order, o3.ID AS CHILDSTATUSID, o3.NAME AS status_name, o3.CURRENT_VALUE AS CHILDSTATUSVALUE, o3.OPTIONALP AS status_range, o3.IS_REMOTABLE AS status_changeable
+// FROM DPADD_OBJECT o0
+// INNER JOIN DPADD_OBJECT_RELATION r1 ON o0.ID = r1.PARENTOBJ_ID AND r1.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+// INNER JOIN DPADD_OBJECT o1 ON r1.CHILDOBJ_ID = o1.ID AND o1.type = "GROUP"
+// INNER JOIN DPADD_OBJECT_RELATION r2 ON o1.ID = r2.PARENTOBJ_ID AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
+// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
+// WHERE o0.NAME = "_DPAD_DBCONSTANT_GROUP_MAIN"
+// ORDER BY level_id, object_name, status_order';
 
+		// $select = sprintf($select_t);
 		$result = $this->querySQL($select);
-
 		return $result;
 	}
 
@@ -315,7 +471,6 @@ ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 				}*/
 			}
 		}
-
 	}
 
 
@@ -333,18 +488,15 @@ FROM DPADD_OBJECT AS O1
 INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
 INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE = "BYMEOBJ"
 WHERE O1.ID in (%s)
-ORDER BY PARENTID;
-';
+ORDER BY PARENTID;';
+
 		if(is_array($ids)) {
 			$ids = implode(', ', $ids);
 		}
 		$select = sprintf($select_t, $ids);
-
 		$result = $this->querySQL($select);
-
 		// AND O2.NAME = "on/off" .. 1 an, 0 aus
 		// AND O2.NAME = "value" .. xx% stärke vom dimmer
-
 		return $result;
 	}
 
@@ -407,7 +559,7 @@ ORDER BY PARENTID;
 	 */
 	public function queryGetTableInfo() {
 
-		$showtables_t = 'SHOW TABLES LIKE \'%s\'';
+		// $showtables_t = 'SHOW TABLES LIKE \'%s\'';
 		$createtable_t = 'PRAGMA table_info(%s);';
 		$select_t = 'SELECT %s FROM %s';
 
@@ -415,11 +567,18 @@ ORDER BY PARENTID;
 
 		//$tables = ['DPADD_OBJECT'];
 
-		$showtables = sprintf($showtables_t, "%DPADD%");
-		echo $showtables;
-		$showtables_result = $this->querySQL($showtables);
-		print_r($showtables_result);
-		return;
+		// $showtables = sprintf($showtables_t, "DPADD_OBJECT");
+		// $showtables = 'select * from DPAD_WEB_PHPCLASS limit 100';
+		// echo $showtables;
+		// $showtables_result = $this->querySQL($showtables);
+		// print_r($showtables_result);
+		// return;
+
+		$sqldump_file = "../vimarbus-dump.sql";
+
+		$fp = fopen($sqldump_file, "w");
+
+		assert(!empty($fp), "Cannot open file ". \realpath($sqldump_file) . " for writing.");
 
 		foreach ($tables as $idx => $table) {
 			// create table statement
@@ -427,7 +586,7 @@ ORDER BY PARENTID;
 			$fieldlist_result = $this->querySQL($createtable);
 			$createtable = $this->generateCreateTable($table, $fieldlist_result);
 
-			echo $createtable;
+			fputs($fp, $createtable);
 
 			// get list of fields
 			$fieldlist = array_map(function($row) {
@@ -442,14 +601,16 @@ ORDER BY PARENTID;
 			//var_dump($result);
 
 			// generate sql inserts
-			$insert = $this->generateInserts($table, $result);
+			$insert = $this->generateInserts($table, $result, $fieldlist_result);
 
-			echo $insert;
-			echo "\n\n";
+			fputs($fp, $insert);
 		}
+
+		fclose($fp);
 
 		//return $result;
 	}
+
 
 	/**
 	 * generated create table statements with given data
@@ -473,7 +634,6 @@ ORDER BY PARENTID;
 
 			$name = trim($rowdef['name']);
 
-
 			if($rowdef['type'] == 'INTEGER') {
 				$type = "int(11)";
 
@@ -490,14 +650,22 @@ ORDER BY PARENTID;
 
 			else if($rowdef['type'] == 'STRING') {
 				$type = "varchar(100)";
-				$default = "DEFAULT '". addslashes($rowdef['dflt_value']) ."'";
+
+				if($rowdef['dflt_value'] !== '') {
+					$default = "DEFAULT '". addslashes($rowdef['dflt_value']) ."'";
+				}
 			}
 			else if($rowdef['type'] == 'TEXT') {
-				$type = "VARCHAR(1000)";
-				$default = "DEFAULT '". addslashes($rowdef['dflt_value']) ."'";
+				$type = "varchar(1000)";
+
+				if($rowdef['dflt_value'] !== '') {
+					$default = "DEFAULT '". addslashes($rowdef['dflt_value']) ."'";
+				}
 			}
 
-			if(!empty($rowdef['notnull'])) { $null = "NOT NULL"; }
+			if(!empty($rowdef['notnull'])) {
+				$null = "NOT NULL";
+			}
 
 			if(!empty($rowdef['pk'])) {
 				$default = "AUTO_INCREMENT";
@@ -513,7 +681,7 @@ ORDER BY PARENTID;
 			$createfields .= sprintf($createfield_t, $name, $type, $null, $default);
 		}
 
-		$create_t = "DROP TABLE %s;
+		$create_t = "DROP TABLE IF EXISTS %s;
 CREATE TABLE IF NOT EXISTS %s (
 %s%s
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
@@ -525,14 +693,28 @@ CREATE TABLE IF NOT EXISTS %s (
 		return $create;
 	}
 
+
+	protected function getEmptyVal($rowdef) {
+		if(!empty($rowdef['notnull'])) {
+			if($rowdef['type'] == 'STRING' || $rowdef['type'] == 'TEXT') {
+				return "''";
+			} else {
+				return 0;
+			}
+		} else {
+			return 'null';
+		}
+	}
+
 	/**
 	 * generates insert statements for given table
 	 * used only for debugging sql queries
-	 * @param  string   $tablename  table name
-	 * @param  array    $selectinfo array of data
-	 * @return string               sql insert statements
+	 * @param  string	$tablename  table name
+	 * @param  array	$selectinfo array of data
+	 * @param  array	$tableinfo field names and types
+	 * @return string	sql insert statements
 	 */
-	protected function generateInserts($tablename, $selectinfo) {
+	protected function generateInserts($tablename, $selectinfo, $tableinfo) {
 		/*
 		INSERT INTO tbl_name
 			(a,b,c)
@@ -550,14 +732,19 @@ VALUES
 
 		foreach ($selectinfo as $idx => $value_row) {
 
-			if(!is_array($value_row)) {
-				echo 'id: '. $idx . "\n";
-				var_dump($value_row);
-				continue;
-			}
-			$value_list = array_map(function($value) {
-				return "'". addslashes($value) ."'";
-			}, $value_row);
+			// if(!is_array($value_row)) {
+			// 	echo 'id: '. $idx . "\n";
+			// 	var_dump($value_row);
+			// 	continue;
+			// }
+			// $value_row and $tableinfo must have the same index, therefor array_map takes each column correctly
+			$value_list = array_map(function($value, $rowdef) {
+				if($value === '') {
+					return $this->getEmptyVal($rowdef);
+				} else {
+					return "'". addslashes($value) ."'";
+				}
+			}, $value_row, $tableinfo);
 
 			$value_array[] = "(". implode(', ', $value_list) . ")";
 		}

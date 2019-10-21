@@ -1,4 +1,4 @@
-[authentication]
-user = 
-password = 
-host = 
+[auth]
+user =
+password =
+host =

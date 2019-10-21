@@ -1,5 +1,14 @@
 {
    "editor.wordSeparators": "`~!@#%^&*()-=+[{]}\\|;:'\",.<>/",
    "editor.tabSize": 2,
-   "php.trace.server": "messages"
+   "php.trace.server": "messages",
+	 "editor.wordWrap": "on",
+	 "editor.insertSpaces": true,
+   "yaml.format.enable": false,
+   "workspace.preserveWindow": true,
+   "workspace.supportMultiRootWorkspace": true,
+   "dockerfile.trace.server": "messages",
+   "git.decorations.colors": true,
+   "json.trace.server": "messages",
+   "json.format.enable": false
 }

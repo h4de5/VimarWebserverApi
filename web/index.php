@@ -1,11 +1,10 @@
 <?php
 
-namespace Pnet\Bus;
+require rtrim(realpath(__DIR__ . '/../lib'), '\\/').'/ClassAutoloader.php';
 
 use Pnet\Bus\Communicate;
 use Pnet\Bus\Render;
-
-require rtrim(realpath(__DIR__ . '/../lib'), '\\/').'/ClassAutoloader.php';
+use Pnet\Bus\Config;
 
 $autoloader = new ClassAutoloader();
 
@@ -13,36 +12,26 @@ $autoloader = new ClassAutoloader();
 setlocale(LC_ALL, "de_DE");
 ini_set('assert.exception', 1);
 
-$config = parse_ini_file("../config.ini", true);
-$host = $config["authentication"]["host"];
-$user = $config["authentication"]["user"];
-$password = $config["authentication"]["password"];
-
-assert(
-	!empty($host),
-	new \AssertionError("Missing host setting in configuration - check config.ini")
-);
-assert(
-	!empty($user),
-	new \AssertionError("Missing user setting in configuration - check config.ini")
-);
-assert(
-	!empty($password),
-	new \AssertionError("Missing password setting in configuration - check config.ini")
-);
-
-//echo '<pre>';
-$com = new Communicate($host, $user, $password);
+$config = (new Config('../config.ini'))->load()->validate()->get();
 
 
+// Communicate
+//	set configuration
+$com = new Communicate(
+	$config['auth']['host'],
+	$config['auth']['user'],
+	$config['auth']['password']);
+
+// if session in cookie
+//	set session id
 if(!empty($_COOKIE['session'])) {
 	$com->setSessionId($_COOKIE['session']);
 }
 
-
 $com->getUser();
 
-
+// TODO: check if session is valid
+// 	login user
 
 if(empty($com->getUserId())) {
 	$com->login();
@@ -50,8 +39,21 @@ if(empty($com->getUserId())) {
 	if(!empty($session)) {
 		setcookie ( 'session', $session,  time()+60*60*24*30, null, null, true, true);
 	}
-	$com->getUser();
+	// $com->getUser();
 }
+
+// get main groups
+$com->getMainGroupIds();
+
+// load all elements
+$com->loadElements();
+
+
+
+
+
+
+
 
 /*
 if(!empty($_GET['session'])) {
@@ -61,8 +63,6 @@ if(!empty($_GET['session'])) {
 	echo '<a href="?session='. $com->getSessionId() . '" title="use this link for further requests">next request</a>';
 }
 */
-
-
 
 if(isset($_GET['ajax'])) {
 
@@ -91,9 +91,9 @@ if(isset($_GET['ajax'])) {
 	exit(0);
 }
 
-// echo "<pre>";
-// $com->queryGetTableInfo();
-// echo "</pre>";
+if(isset($_GET['dump'])) {
+	$com->queryGetTableInfo();
+}
 
 
 // $com->getObjectList();
