@@ -1,22 +1,44 @@
 <?php
-namespace Pnet\Bus;
+namespace Pnet\Bus\Model;
 
 use Pnet\Bus\BusStatus;
 
 /**
  * BusElement
- * Each actor as well as each room is a BusElement
- * it has ID, name, type and can have BusElements as childs
+ * Each actor is a BusElement
+ * it has an ID, name, type, status and belongs to one or more rooms
  *
  */
 class BusElement implements \Iterator, \ArrayAccess {
+	/**
+	 * @var mixed
+	 */
 	public $id;
+	/**
+	 * @var mixed
+	 */
 	public $name;
-	public $childs;
+	/**
+	 * @var BusStatus
+	 */
 	public $status;
+	/**
+	 * @var mixed
+	 */
 	public $type;
-	public $values_type;
 
+	/**
+	 * @var array
+	 */
+	public $rooms;
+
+	/**
+	 * @var mixed
+	 */
+	public $values_type;
+	/**
+	 * @var int
+	 */
 	private $position = 0;
 
 	/**
@@ -29,7 +51,7 @@ class BusElement implements \Iterator, \ArrayAccess {
 	 * @param array $childs
 	 * @param array $status
 	 */
-	function __construct($id, $name, $type, $values_type, $childs = array(), $status = array()) {
+	public function __construct($id, $name, $type, $values_type, $childs = [], $status = []) {
 		$this->id = $id;
 		$this->name = $name;
 		$this->type = $type;
@@ -40,32 +62,47 @@ class BusElement implements \Iterator, \ArrayAccess {
 		$this->position = 0;
 	}
 
+	/**
+	 * @return mixed
+	 */
 	public function isOn() {
 		return $this->getStatusData("on/off");
 	}
 
+	/**
+	 * @param $statusname
+	 * @return mixed
+	 */
 	public function getStatusData($statusname) {
 		$status = $this->getStatus($statusname);
-		if($status != null) {
+		if (null != $status) {
 			return $status->value;
 		}
 		return $status;
 	}
 
+	/**
+	 * @param $statusname
+	 * @return mixed
+	 */
 	public function getStatusId($statusname) {
 		$status = $this->getStatus($statusname);
-		if($status != null) {
+		if (null != $status) {
 			return $status->id;
 		}
 		return $status;
 	}
 
+	/**
+	 * @param $statusname
+	 * @return mixed
+	 */
 	public function getStatus($statusname) {
-		if(empty($this->status)) {
+		if (empty($this->status)) {
 			return null;
 		}
 		foreach ($this->status as $idx => $status) {
-			if($status->type == $statusname) {
+			if ($status->type == $statusname) {
 				return $status;
 			}
 		}
@@ -76,7 +113,6 @@ class BusElement implements \Iterator, \ArrayAccess {
 		return mb_convert_case($this->name, MB_CASE_TITLE, 'UTF-8');
 	}
 
-
 	/**
 	 * add a child to this element
 	 * @param BusElement $element child element
@@ -86,6 +122,10 @@ class BusElement implements \Iterator, \ArrayAccess {
 		$this->childs[] = $element;
 		//return &$this->childs[count($this->childs)-1];
 	}
+	/**
+	 * @param $key
+	 * @param $value
+	 */
 	public function addStatus($key, $value) {
 		//$this->status[$key] = $value;
 		$this->offsetSet($key, $value);
@@ -100,64 +140,83 @@ class BusElement implements \Iterator, \ArrayAccess {
 		}
 	}
 
+	/**
+	 * @param $offset
+	 */
 	public function offsetExists($offset) {
 		return isset($this->status[$offset]);
 	}
 
+	/**
+	 * @param $offset
+	 */
 	public function offsetUnset($offset) {
 		unset($this->status[$offset]);
 	}
 
+	/**
+	 * @param $offset
+	 */
 	public function offsetGet($offset) {
 		return isset($this->status[$offset]) ? $this->status[$offset] : null;
 	}
 
-
 	/** Iterator methods */
-	function rewind() {
+	public function rewind() {
 		$this->position = 0;
 	}
-	function current() {
+	/**
+	 * @return mixed
+	 */
+	public function current() {
 		return $this->childs[$this->position];
 	}
-	function key() {
+	/**
+	 * @return mixed
+	 */
+	public function key() {
 		return $this->position;
 	}
-	function next() {
+	public function next() {
 		++$this->position;
 	}
-	function valid() {
+	public function valid() {
 		return isset($this->childs[$this->position]);
 	}
 
-
 	############################### DEBUG ###############################
+	/**
+	 * @return mixed
+	 */
 	public function __toString() {
-		$ret = '#'. $this->id .' '. $this->name
-			.' ('. $this->type .')';
+		$ret = '#' . $this->id . ' ' . $this->name
+		. ' (' . $this->type . ')';
 
-		if(count($this->childs) > 0) {
-			$ret .= ' - '. count($this->childs) .' child'.(count($this->childs) > 1 ? 's' : '');
+		if (count($this->childs) > 0) {
+			$ret .= ' - ' . count($this->childs) . ' child' . (count($this->childs) > 1 ? 's' : '');
 		}
 
-		if(count($this->status) > 0) {
+		if (count($this->status) > 0) {
 			//$val = reset($this->status);
 			//$key = key($this->status);
 
 			//$ret .= ' / '. $val;
 		}
-		return $ret ;
+		return $ret;
 	}
 
+	/**
+	 * @return mixed
+	 */
 	public function __debugInfo() {
 		$ret = [
-			'element' => '#'. $this->id .' '. $this->name
-			.' ('. $this->type .')']
+			'element' => '#' . $this->id . ' ' . $this->name
+			. ' (' . $this->type . ')']
 		;
-		if(count($this->childs) > 0) {
+		if (count($this->childs) > 0) {
 			$ret['childs'] = $this->childs;
 		}
-		if(count($this->status) > 0) {
+		if (count($this->status) > 0) {
 			$ret['status'] = $this->status;
 		}
 

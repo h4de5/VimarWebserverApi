@@ -1,18 +1,36 @@
 <?php
 namespace Pnet\Bus;
 
-use Pnet\Bus\Curl;
-use Pnet\Bus\Utils;
-use Pnet\Bus\Render;
-use Pnet\Bus\BusElement;
 use Pnet\Bus\BusStatus;
+use Pnet\Bus\Curl;
+use Pnet\Bus\Model\BusElement;
+use Pnet\Bus\Render;
+use Pnet\Bus\Utils;
 
+/**
+ * utility that communicates with the server via sql statements
+ */
 class Communicate {
+	/**
+	 * @var mixed
+	 */
 	protected $sessionid = null;
+	/**
+	 * @var mixed
+	 */
 	protected $host, $user, $password;
 
+	/**
+	 * @var mixed
+	 */
 	protected $group_ids = null;
+	/**
+	 * @var mixed
+	 */
 	protected $main_group_ids = null;
+	/**
+	 * @var mixed
+	 */
 	protected $user_id = null;
 
 	/**
@@ -29,7 +47,10 @@ class Communicate {
 		$this->user_id = $user_id;
 	}
 
-	protected $elements = array();
+	/**
+	 * @var array
+	 */
+	protected $elements = [];
 
 	/**
 	 * [__construct description]
@@ -38,27 +59,40 @@ class Communicate {
 	 * @param string $password password used to login
 	 * @param string $sessionid if available a sessionId can be set as well
 	 */
-	function __construct($host, $user, $password, $sessionid = null) {
+	public function __construct($host, $user, $password, $sessionid = null) {
 		$this->host = $host;
 		$this->user = $user;
 		$this->password = $password;
 
-		if($sessionid) {
+		if ($sessionid) {
 			$this->sessionid = $sessionid;
 		}
 
 	}
 
+	/**
+	 * @return mixed
+	 */
 	public function getSessionId() {
 		return $this->sessionid;
 	}
+	/**
+	 * @param $sessionid
+	 */
 	public function setSessionId($sessionid) {
 		$this->sessionid = $sessionid;
 	}
 
+	/**
+	 * @return mixed
+	 */
 	public function getElements() {
 		return $this->elements;
 	}
+	/**
+	 * @param $id
+	 * @return mixed
+	 */
 	public function getElement($id) {
 		return $this->elements[$id];
 	}
@@ -72,14 +106,14 @@ class Communicate {
 		$loginurl_t = 'https://%s/vimarbyweb/modules/system/user_login.php?sessionid=&username=%s&password=%s&remember=0&op=login';
 		$loginurl = sprintf($loginurl_t, $this->host, $this->user, $this->password);
 		$result = Curl::send($loginurl);
-		if(!empty($result['curl_error'])) {
-			throw new \Exception("Curl error during login: ". $result['curl_error'], 2017060723121);
+		if (!empty($result['curl_error'])) {
+			throw new \Exception("Curl error during login: " . $result['curl_error'], 2017060723121);
 		} else {
 			$xml = Utils::xml2array($result['body']);
-			if(!empty($xml->message)) {
-				throw new \Exception("API error during login: ". $xml->message, 2017060723175);
+			if (!empty($xml->message)) {
+				throw new \Exception("API error during login: " . $xml->message, 2017060723175);
 			}
-			if(empty($xml->sessionid)) {
+			if (empty($xml->sessionid)) {
 				throw new \Exception("Could not get a SessionID after login.", 2017062923284);
 			}
 			// now we do have a session
@@ -87,6 +121,10 @@ class Communicate {
 		}
 	}
 
+	/**
+	 * returns the main groups (rooms from a bus project)
+	 * @return array
+	 */
 	public function getMainGroupIds() {
 		$select_t = 'SELECT GROUP_CONCAT(o1.id) as MAIN_GROUPS FROM DPADD_OBJECT o0
 INNER JOIN DPADD_OBJECT_RELATION r1 ON o0.ID = r1.PARENTOBJ_ID AND r1.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
@@ -96,11 +134,9 @@ WHERE o0.NAME = "_DPAD_DBCONSTANT_GROUP_MAIN";';
 		$select = sprintf($select_t);
 		$result = $this->querySQL($select);
 
-		var_dump($result);
+		// var_dump($result);
 		// only first line
 		$result = $result[0];
-
-
 
 		// set main groups
 		$this->main_group_ids = $result['MAIN_GROUPS'];
@@ -108,27 +144,34 @@ WHERE o0.NAME = "_DPAD_DBCONSTANT_GROUP_MAIN";';
 		return $result;
 	}
 
+	/**
+	 * @return mixed
+	 */
 	public function loadElements() {
 		// THIS IS STILL TOO MUCH !!
-// 		$select_t = 'SELECT DISTINCT o2.ID AS object_id, o2.NAME AS object_name, o2.IMAGE_PATH AS object_image,
-// r3.order_num AS status_order, o3.ID AS status_id, o3.NAME AS status_name, o3.DESCRIPTION AS status_description, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range, o3.IS_REMOTABLE AS status_changeable
-// FROM DPADD_OBJECT_RELATION r2
-// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
-// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
-// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
-// WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-// ORDER BY object_name, status_order ;';
+		// 		$select_t = 'SELECT DISTINCT o2.ID AS object_id, o2.NAME AS object_name, o2.IMAGE_PATH AS object_image,
+		// r3.order_num AS status_order, o3.ID AS status_id, o3.NAME AS status_name, o3.DESCRIPTION AS status_description, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range, o3.IS_REMOTABLE AS status_changeable
+		// FROM DPADD_OBJECT_RELATION r2
+		// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
+		// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+		// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
+		// WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+		// ORDER BY object_name, status_order ;';
 
 // geht a ned ! killed webserver
-// $select_t = 'SELECT GROUP_CONCAT(r2.PARENTOBJ_ID) AS room_ids, o2.ID AS object_id, o2.NAME AS object_name,
-// o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range
-// FROM DPADD_OBJECT_RELATION r2
-// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
-// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
-// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
-// WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-// GROUP BY object_id, object_name, status_id, status_name, status_value, status_range
-// ORDER BY object_name;';
+		// $select_t = 'SELECT GROUP_CONCAT(r2.PARENTOBJ_ID) AS room_ids, o2.ID AS object_id, o2.NAME AS object_name,
+		// o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range
+		// FROM DPADD_OBJECT_RELATION r2
+		// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
+		// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+		// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
+		// WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+		// GROUP BY object_id, object_name, status_id, status_name, status_value, status_range
+		// ORDER BY object_name;';
+
+		if (empty($this->main_group_ids)) {
+			throw new \Exception("No main group ids defined", 2019110623161);
+		}
 
 		$select_t = 'SELECT r2.PARENTOBJ_ID as room_id, o2.ID AS object_id, o2.NAME AS object_name,
 o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range
@@ -143,9 +186,7 @@ ORDER BY object_name;';
 
 		$elementlist = $this->querySQL($select);
 
-
-
-		if(!empty($elementlist)) {
+		if (!empty($elementlist)) {
 			foreach ($elementlist as $idx => $row) {
 				var_dump($row);
 
@@ -213,13 +254,13 @@ ORDER BY USER_NAME;';
 
 		//$headers = 'SOAPAction:dbSoapRequest';
 		$headers = [
-			'SOAPAction' => 'dbSoapRequest',
-			'SOAPServer' => '',
+			'SOAPAction'   => 'dbSoapRequest',
+			'SOAPServer'   => '',
 			#'X-Requested-With' => 'XMLHttpRequest',
 			'Content-Type' => 'text/xml; charset="UTF-8"',
 			// needs to be set to overcome: 'Expect' => '100-continue' header
 			// otherwise header and payload is send in two requests if payload is bigger then 1024byte
-			'Expect' => '',
+			'Expect'       => ''
 		];
 		$headers_tmp = [];
 		foreach ($headers as $key => $value) {
@@ -229,8 +270,8 @@ ORDER BY USER_NAME;';
 
 		$result = Curl::send($url, $post, $headers);
 
-		if(!empty($result['curl_error'])) {
-			throw new \Exception("Curl error in QuerySQL: ". $result['curl_error'], 2017060800253);
+		if (!empty($result['curl_error'])) {
+			throw new \Exception("Curl error in QuerySQL: " . $result['curl_error'], 2017060800253);
 		} else {
 			return $result;
 		}
@@ -252,14 +293,14 @@ ORDER BY USER_NAME;';
 		$result = $this->sendToWebserver($post);
 
 		$xml = Utils::xml2array($result['body']);
-		if($xml !== false) {
+		if (false !== $xml) {
 			$payload = $xml->xpath('//payload')[0];
 			$query_result = Utils::parseSQLPayload($payload);
 		} else {
-			echo "\n".'Query Result empty for: '.  $post ."\n";
-			echo "\n Length: ". strlen($post) ."\n";
-			echo "\n post: ". htmlentities($post) . "\n";
-			echo '>- '. print_r(htmlentities($result['body']), true) .'-<';
+			echo "\n" . 'Query Result empty for: ' . $post . "\n";
+			echo "\n Length: " . strlen($post) . "\n";
+			echo "\n post: " . htmlentities($post) . "\n";
+			echo '>- ' . print_r(htmlentities($result['body']), true) . '-<';
 			$query_result = null;
 		}
 
@@ -308,26 +349,25 @@ SELECT COUNT(D_O.ID) AS COUNTER FROM DPADD_OBJECT AS D_O LEFT JOIN (SELECT CLASS
 
 		// <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><service-runonelement xmlns="urn:xmethods-dpadws"><payload>0</payload><hashcode>NO-HASHCODE</hashcode><optionals>NO-OPTIONALS</optionals><callsource>WEB-DOMUSPAD_SOAP</callsource><sessionid>5b8bd7b958093</sessionid><waittime>10</waittime><idobject>710</idobject><operation>SETVALUE</operation></service-runonelement></soapenv:Body></soapenv:Envelope>
 
-
-		$select = trim(str_replace(array("\r\n","\n"), " ", str_replace(array("'", '"'), '&apos;', $select) ));
+		$select = trim(str_replace(["\r\n", "\n"], " ", str_replace(["'", '"'], '&apos;', $select)));
 		$post = sprintf($post_t, $this->sessionid, $select, strlen($select));
 
 		$result = $this->sendToWebserver($post);
 
 		$xml = Utils::xml2array($result['body']);
-		if($xml !== false) {
+		if (false !== $xml) {
 			$payload = $xml->xpath('//payload')[0];
 			$query_result = Utils::parseSQLPayload($payload);
 		} else {
-			echo "\n".'Query Result empty for: '.  $select ."\n";
-			echo "\n Length: ". strlen($select) ."\n";
-			echo "\n post: ". htmlentities($post) . "\n";
-			echo '>- '. print_r(htmlentities($result['body']), true) .'-<';
+			echo "\n" . 'Query Result empty for: ' . $select . "\n";
+			echo "\n Length: " . strlen($select) . "\n";
+			echo "\n post: " . htmlentities($post) . "\n";
+			echo '>- ' . print_r(htmlentities($result['body']), true) . '-<';
 			$query_result = null;
 		}
 
 		return $query_result;
-			/*
+		/*
 			if(!empty($xml->message)) {
 				throw new \Exception("API error during login: ". $xml->message, 2017060723175);
 			}
@@ -368,7 +408,6 @@ ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 		// too less, we need more data at once
 		$select_t = 'SELECT D_O.ID AS OBJECT_ID, D_O.NAME AS OBJECT_NAME, D_O.DESCRIPTION AS OBJECT_DESCRIPTION, D_O.TYPE AS OBJECT_TYPE, D_OR.PARENTOBJ_ID AS USERGROUP_ID FROM DPADD_OBJECT AS D_O INNER JOIN DPADD_OBJECT_RELATION AS D_OR ON (D_O.ID=D_OR.CHILDOBJ_ID) WHERE (D_OR.PARENTOBJ_ID IN (%d) AND D_OR.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION") ORDER BY OBJECT_NAME;';
 
-
 		// Too much, will kill webserver
 		$select = '
 SELECT O1.ID AS PARENTID, O1.NAME AS PARENTNAME, O1.TYPE AS PARENTTYPE, O2.ID AS CHILDID, O2.NAME AS CHILDNAME, O2.TYPE AS CHILDTYPE, REL3.OPTIONAL, O3.ID AS VALUEID, O3.NAME AS VALUENAME, O3.CURRENT_VALUE, O3.OPTIONALP, O3.IS_REMOTABLE
@@ -380,7 +419,6 @@ INNER JOIN DPADD_OBJECT_RELATION AS REL3 ON O2.ID = REL3.PARENTOBJ_ID AND REL3.R
 INNER JOIN DPADD_OBJECT AS O3 ON O3.ID = REL3.CHILDOBJ_ID AND O3.IS_REMOTABLE = 1
 WHERE REL1.PARENTOBJ_ID IN (20) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION" AND O2.ID = 704 AND O1.ID = 703;
 ';
-
 
 SELECT '#' AS 'o0', o0.ID, o0.NAME, o0.TYPE, '#' AS 'o01', o1.ID, o1.NAME, o1.TYPE, '#' AS 'o2', o2.ID, o2.NAME, o2.TYPE, '#' AS 'o3', o3.ID, o3.NAME, o3.TYPE, '#' AS 'o4', o4.ID, o4.NAME, o4.TYPE, '#' AS 'o5', o5.ID, o5.NAME, o5.TYPE
 FROM DPADD_OBJECT o0
@@ -396,7 +434,6 @@ LEFT JOIN DPADD_OBJECT_RELATION r5 ON o4.ID = r5.PARENTOBJ_ID
 LEFT JOIN DPADD_OBJECT o5 ON r5.CHILDOBJ_ID = o5.ID
 WHERE o0.NAME = '_DPAD_DBCONSTANT_GROUP_MAIN';
 
-
 SELECT o1.ID AS level_id, o1.NAME AS level_name, o2.ID AS object_id, o2.NAME AS object_name, o3.ID AS status_id, o3.NAME AS status_name, '#' AS 'o4', o4.ID, o4.NAME, o4.TYPE, '#' AS 'o5', o5.ID, o5.NAME, o5.TYPE
 FROM DPADD_OBJECT o0
 INNER JOIN DPADD_OBJECT_RELATION r1 ON o0.ID = r1.PARENTOBJ_ID
@@ -411,7 +448,6 @@ LEFT JOIN DPADD_OBJECT_RELATION r5 ON o4.ID = r5.PARENTOBJ_ID
 LEFT JOIN DPADD_OBJECT o5 ON r5.CHILDOBJ_ID = o5.ID
 WHERE o0.NAME = '_DPAD_DBCONSTANT_GROUP_MAIN';
 
-
 		*/
 
 		// just right
@@ -423,25 +459,24 @@ INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND REL2.R
 INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE IN ("GROUP", "BYMEIDX")
 WHERE REL1.PARENTOBJ_ID IN (%d) AND REL1.RELATION_WEB_TIPOLOGY="USERGROUP_RELATION"
 ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
-	$select = sprintf($select_t, $this->group_ids);
+		$select = sprintf($select_t, $this->group_ids);
 
 // $select_t = 'SELECT o1.ID AS PARENTID, o1.NAME AS PARENTNAME, o2.ID AS CHILDID, o2.NAME AS CHILDNAME, o2.IMAGE_PATH AS object_image, o2.VALUES_TYPE as VALUES_TYPE,
-// r3.order_num AS status_order, o3.ID AS CHILDSTATUSID, o3.NAME AS status_name, o3.CURRENT_VALUE AS CHILDSTATUSVALUE, o3.OPTIONALP AS status_range, o3.IS_REMOTABLE AS status_changeable
-// FROM DPADD_OBJECT o0
-// INNER JOIN DPADD_OBJECT_RELATION r1 ON o0.ID = r1.PARENTOBJ_ID AND r1.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-// INNER JOIN DPADD_OBJECT o1 ON r1.CHILDOBJ_ID = o1.ID AND o1.type = "GROUP"
-// INNER JOIN DPADD_OBJECT_RELATION r2 ON o1.ID = r2.PARENTOBJ_ID AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
-// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
-// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
-// WHERE o0.NAME = "_DPAD_DBCONSTANT_GROUP_MAIN"
-// ORDER BY level_id, object_name, status_order';
+		// r3.order_num AS status_order, o3.ID AS CHILDSTATUSID, o3.NAME AS status_name, o3.CURRENT_VALUE AS CHILDSTATUSVALUE, o3.OPTIONALP AS status_range, o3.IS_REMOTABLE AS status_changeable
+		// FROM DPADD_OBJECT o0
+		// INNER JOIN DPADD_OBJECT_RELATION r1 ON o0.ID = r1.PARENTOBJ_ID AND r1.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+		// INNER JOIN DPADD_OBJECT o1 ON r1.CHILDOBJ_ID = o1.ID AND o1.type = "GROUP"
+		// INNER JOIN DPADD_OBJECT_RELATION r2 ON o1.ID = r2.PARENTOBJ_ID AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+		// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
+		// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+		// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
+		// WHERE o0.NAME = "_DPAD_DBCONSTANT_GROUP_MAIN"
+		// ORDER BY level_id, object_name, status_order';
 
 		// $select = sprintf($select_t);
 		$result = $this->querySQL($select);
 		return $result;
 	}
-
 
 	/**
 	 * converts the sql result into a BusElement list Structure
@@ -450,19 +485,19 @@ ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 	 * @return void
 	 */
 	public function buildBusProject($elementlist) {
-		$this->elements = array();
+		$this->elements = [];
 
-		if(!empty($elementlist)) {
+		if (!empty($elementlist)) {
 			foreach ($elementlist as $idx => $row) {
 				// current rows parentid is not yet in the projects list, add it
-				if(!isset($this->elements[$row['PARENTID']])) {
+				if (!isset($this->elements[$row['PARENTID']])) {
 					$element = new BusElement($row['PARENTID'], $row['PARENTNAME'], $row['PARENTTYPE'], $row['VALUES_TYPE']);
 					$this->elements[$row['PARENTID']] = &$element;
 				} /*else {
 					$element = $this->elements[$row['PARENTID']];
 				}*/
 
-				if(!isset($this->elements[$row['CHILDID']])) {
+				if (!isset($this->elements[$row['CHILDID']])) {
 					$child = new BusElement($row['CHILDID'], $row['CHILDNAME'], $row['CHILDTYPE'], $row['VALUES_TYPE']);
 					$this->elements[$row['PARENTID']]->addChild($child);
 					$this->elements[$row['CHILDID']] = $child;
@@ -473,16 +508,14 @@ ORDER BY PARENTID, CHILDID, REL1.ORDER_NUM, REL2.ORDER_NUM;';
 		}
 	}
 
-
-
 	/**
 	 * get all Status values for a list of element Ids
 	 * @param  int[] $ids array or csv of element ids
 	 * @return array        sql result with all available element status
 	 */
 	public function getValue($ids) {
-			// O2.IS_REMOTABLE = 1 .. rollladen have is_remoteable = 0
-			// AND O2.OPTIONALP != ""
+		// O2.IS_REMOTABLE = 1 .. rollladen have is_remoteable = 0
+		// AND O2.OPTIONALP != ""
 		$select_t = 'SELECT O1.ID AS PARENTID, O1.NAME AS PARENTNAME, O1.TYPE AS PARENTTYPE, REL2.OPTIONAL, O2.ID as VALUEID, O2.NAME as VALUENAME, O2.CURRENT_VALUE, O2.OPTIONALP, O2.IS_REMOTABLE
 FROM DPADD_OBJECT AS O1
 INNER JOIN DPADD_OBJECT_RELATION AS REL2 ON O1.ID = REL2.PARENTOBJ_ID AND RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
@@ -490,7 +523,7 @@ INNER JOIN DPADD_OBJECT AS O2 ON O2.ID = REL2.CHILDOBJ_ID AND O2.TYPE = "BYMEOBJ
 WHERE O1.ID in (%s)
 ORDER BY PARENTID;';
 
-		if(is_array($ids)) {
+		if (is_array($ids)) {
 			$ids = implode(', ', $ids);
 		}
 		$select = sprintf($select_t, $ids);
@@ -500,7 +533,6 @@ ORDER BY PARENTID;';
 		return $result;
 	}
 
-
 	/**
 	 * converts the sql result into update for the BusElement structure
 	 * updates $this->elements with current element status
@@ -509,17 +541,17 @@ ORDER BY PARENTID;';
 	 */
 	public function updateBusProject($statuslist) {
 
-		if(!empty($statuslist)) {
+		if (!empty($statuslist)) {
 			foreach ($statuslist as $idx => $row) {
 				//echo "idx: $idx - parent: {$row['PARENTID']} - valueid: {$row['VALUEID']}\n";
 				// current rows parentid is not yet in the projects list, add it
-				if(!isset($this->elements[$row['PARENTID']])) {
-					echo "ERROR: status for unknown element received: ". $row['PARENTID'] . ': '. print_r($row, true)."\n";
+				if (!isset($this->elements[$row['PARENTID']])) {
+					echo "ERROR: status for unknown element received: " . $row['PARENTID'] . ': ' . print_r($row, true) . "\n";
 					continue;
 				}
 
 				// if this si a new status, create a status object
-				if(!isset($this->elements[$row['PARENTID']][$row['VALUEID']])) {
+				if (!isset($this->elements[$row['PARENTID']][$row['VALUEID']])) {
 					//echo "hier: PARENTID: {$row['PARENTID']} - valueid: {$row['VALUEID']}\n";
 					$status = new BusStatus($row['VALUEID'], $row['VALUENAME'], $row['CURRENT_VALUE'], $row['OPTIONALP']);
 					$this->elements[$row['PARENTID']][$row['VALUEID']] = $status;
@@ -541,14 +573,12 @@ ORDER BY PARENTID;';
 	 * @return array part of elements array
 	 */
 	public function getBusElements() {
-		return array_filter ( $this->elements,
-			function($element, $key) {
-				return $element->type == 'BYMEIDX';
+		return array_filter($this->elements,
+			function ($element, $key) {
+				return 'BYMEIDX' == $element->type;
 			}, ARRAY_FILTER_USE_BOTH
 		);
 	}
-
-
 
 	############################### DEBUG ###############################
 	/**
@@ -578,7 +608,7 @@ ORDER BY PARENTID;';
 
 		$fp = fopen($sqldump_file, "w");
 
-		assert(!empty($fp), "Cannot open file ". \realpath($sqldump_file) . " for writing.");
+		assert(!empty($fp), "Cannot open file " . \realpath($sqldump_file) . " for writing.");
 
 		foreach ($tables as $idx => $table) {
 			// create table statement
@@ -589,16 +619,16 @@ ORDER BY PARENTID;';
 			fputs($fp, $createtable);
 
 			// get list of fields
-			$fieldlist = array_map(function($row) {
+			$fieldlist = array_map(function ($row) {
 				return $row['name'];
 			}, $fieldlist_result);
 
 			// query each field from $table
 			$select = sprintf($select_t, implode(", ", $fieldlist), $table);
-			//$select = sprintf($select_t, '*', $table);
-			//var_dump($select);
+			                                    //$select = sprintf($select_t, '*', $table);
+			                                    //var_dump($select);
 			$result = $this->querySQL($select); //. " limit 186, 2");
-			//var_dump($result);
+			                                    //var_dump($result);
 
 			// generate sql inserts
 			$insert = $this->generateInserts($table, $result, $fieldlist_result);
@@ -610,7 +640,6 @@ ORDER BY PARENTID;';
 
 		//return $result;
 	}
-
 
 	/**
 	 * generated create table statements with given data
@@ -634,46 +663,43 @@ ORDER BY PARENTID;';
 
 			$name = trim($rowdef['name']);
 
-			if($rowdef['type'] == 'INTEGER') {
+			if ('INTEGER' == $rowdef['type']) {
 				$type = "int(11)";
 
-				if($rowdef['dflt_value'] !== '') {
-					$default = 'DEFAULT '. intval($rowdef['dflt_value']);
+				if ('' !== $rowdef['dflt_value']) {
+					$default = 'DEFAULT ' . intval($rowdef['dflt_value']);
 				}
-			} else if($rowdef['type'] == 'INTEGER(1)') {
+			} else if ('INTEGER(1)' == $rowdef['type']) {
 				$type = "tinyint(4)";
 
-				if($rowdef['dflt_value'] !== '') {
-					$default = 'DEFAULT '. intval($rowdef['dflt_value']);
+				if ('' !== $rowdef['dflt_value']) {
+					$default = 'DEFAULT ' . intval($rowdef['dflt_value']);
 				}
-			}
-
-			else if($rowdef['type'] == 'STRING') {
+			} else if ('STRING' == $rowdef['type']) {
 				$type = "varchar(100)";
 
-				if($rowdef['dflt_value'] !== '') {
-					$default = "DEFAULT '". addslashes($rowdef['dflt_value']) ."'";
+				if ('' !== $rowdef['dflt_value']) {
+					$default = "DEFAULT '" . addslashes($rowdef['dflt_value']) . "'";
 				}
-			}
-			else if($rowdef['type'] == 'TEXT') {
+			} else if ('TEXT' == $rowdef['type']) {
 				$type = "varchar(1000)";
 
-				if($rowdef['dflt_value'] !== '') {
-					$default = "DEFAULT '". addslashes($rowdef['dflt_value']) ."'";
+				if ('' !== $rowdef['dflt_value']) {
+					$default = "DEFAULT '" . addslashes($rowdef['dflt_value']) . "'";
 				}
 			}
 
-			if(!empty($rowdef['notnull'])) {
+			if (!empty($rowdef['notnull'])) {
 				$null = "NOT NULL";
 			}
 
-			if(!empty($rowdef['pk'])) {
+			if (!empty($rowdef['pk'])) {
 				$default = "AUTO_INCREMENT";
 				//$keys = " PRIMARY KEY (`$name`)";
 				$keys = "   PRIMARY KEY ($name)";
 			}
 
-			if(substr($name, -3) === '_ID' && $rowdef['type'] !== 'TEXT') {
+			if (substr($name, -3) === '_ID' && 'TEXT' !== $rowdef['type']) {
 				$keys .= ",
 	KEY ($name)";
 			}
@@ -693,10 +719,13 @@ CREATE TABLE IF NOT EXISTS %s (
 		return $create;
 	}
 
-
+	/**
+	 * @param $rowdef
+	 * @return int
+	 */
 	protected function getEmptyVal($rowdef) {
-		if(!empty($rowdef['notnull'])) {
-			if($rowdef['type'] == 'STRING' || $rowdef['type'] == 'TEXT') {
+		if (!empty($rowdef['notnull'])) {
+			if ('STRING' == $rowdef['type'] || 'TEXT' == $rowdef['type']) {
 				return "''";
 			} else {
 				return 0;
@@ -738,15 +767,15 @@ VALUES
 			// 	continue;
 			// }
 			// $value_row and $tableinfo must have the same index, therefor array_map takes each column correctly
-			$value_list = array_map(function($value, $rowdef) {
-				if($value === '') {
+			$value_list = array_map(function ($value, $rowdef) {
+				if ('' === $value) {
 					return $this->getEmptyVal($rowdef);
 				} else {
-					return "'". addslashes($value) ."'";
+					return "'" . addslashes($value) . "'";
 				}
 			}, $value_row, $tableinfo);
 
-			$value_array[] = "(". implode(', ', $value_list) . ")";
+			$value_array[] = "(" . implode(', ', $value_list) . ")";
 		}
 
 		$fieldlist = array_keys($selectinfo[0]);
