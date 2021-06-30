@@ -69,7 +69,7 @@ class Utils {
 	}
 
 	/**
-	 * cuts away first to lines, and creates and associated array with the actual data
+	 * cuts away first two lines, and creates and associated array with the actual data
 	 * @param  string $payload payload data from the bus interfacce
 	 * @return array         payload data as assoc array
 	 */

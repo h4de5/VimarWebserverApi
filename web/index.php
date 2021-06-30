@@ -46,8 +46,12 @@ if(empty($com->getUserId())) {
 $com->getMainGroupIds();
 
 // load all elements
-$com->loadElements();
+// $com->loadElements();
 
+// load all rooms
+// $com->getRooms();
+
+$com->getStatus();
 
 
 

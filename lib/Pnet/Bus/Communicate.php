@@ -12,26 +12,34 @@ use Pnet\Bus\Utils;
  */
 class Communicate {
 	/**
-	 * @var mixed
+	 * Session ID used for password less login
+	 * @var string
 	 */
 	protected $sessionid = null;
 	/**
-	 * @var mixed
+	 * connection details for the vimar webserver
+	 * @var string
 	 */
 	protected $host, $user, $password;
-
 	/**
-	 * @var mixed
+	 * user id used in queries, returned from
+	 * @var integer
 	 */
-	protected $group_ids = null;
+	protected $user_id = null;
+	/**
+	 * array of intergers
+	 * @var array
+	 */
+	protected $group_ids = [];
 	/**
 	 * @var mixed
 	 */
 	protected $main_group_ids = null;
+
 	/**
-	 * @var mixed
+	 * @var array
 	 */
-	protected $user_id = null;
+	protected $elements = [];
 
 	/**
 	 * @return null
@@ -46,11 +54,6 @@ class Communicate {
 	public function setUserId($user_id): void {
 		$this->user_id = $user_id;
 	}
-
-	/**
-	 * @var array
-	 */
-	protected $elements = [];
 
 	/**
 	 * [__construct description]
@@ -144,11 +147,103 @@ WHERE o0.NAME = "_DPAD_DBCONSTANT_GROUP_MAIN";';
 		return $result;
 	}
 
+
+
+
+	/**
+	 * read all rooms from main_group_ids
+	 */
+	public function getStatus() {
+		if (empty($this->main_group_ids)) {
+			throw new \Exception("No main group ids defined", 2019110623161);
+		}
+
+		$select_t = 'SELECT r3.PARENTOBJ_ID as object_id, o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.*
+FROM DPADD_OBJECT_RELATION r3
+INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ"
+WHERE r3.PARENTOBJ_ID IN (%s) AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+ORDER BY o3.ID;';
+
+
+		$select = sprintf($select_t, "614"); // 964, 989
+
+		$elementlist = $this->querySQL($select);
+
+		if (!empty($elementlist)) {
+			foreach ($elementlist as $idx => $row) {
+				var_dump($row);
+
+				// // current rows parentid is not yet in the projects list, add it
+				// if(!isset($this->elements[$row['PARENTID']])) {
+				// 	$element = new BusElement($row['PARENTID'], $row['PARENTNAME'], $row['PARENTTYPE'], $row['VALUES_TYPE']);
+				// 	$this->elements[$row['PARENTID']] = &$element;
+				// } /*else {
+				// 	$element = $this->elements[$row['PARENTID']];
+				// }*/
+
+				// if(!isset($this->elements[$row['CHILDID']])) {
+				// 	$child = new BusElement($row['CHILDID'], $row['CHILDNAME'], $row['CHILDTYPE'], $row['VALUES_TYPE']);
+				// 	$this->elements[$row['PARENTID']]->addChild($child);
+				// 	$this->elements[$row['CHILDID']] = $child;
+				// } /*else {
+				// 	$element = $this->elements[$row['CHILDID']];
+				// }*/
+			}
+		}
+
+		return $result;
+
+	}
+
+	/**
+	 * read all rooms from main_group_ids
+	 */
+	public function getRooms() {
+		if (empty($this->main_group_ids)) {
+			throw new \Exception("No main group ids defined", 2019110623161);
+		}
+
+		$select_t = 'SELECT r2.PARENTOBJ_ID as room_id, o2.ID AS object_id, o2.NAME AS object_name, o2.*
+FROM DPADD_OBJECT_RELATION r2
+INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Scene")
+WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+ORDER BY object_name;';
+
+		$select = sprintf($select_t, $this->main_group_ids);
+
+		$elementlist = $this->querySQL($select);
+
+		if (!empty($elementlist)) {
+			foreach ($elementlist as $idx => $row) {
+				var_dump($row);
+
+				// // current rows parentid is not yet in the projects list, add it
+				// if(!isset($this->elements[$row['PARENTID']])) {
+				// 	$element = new BusElement($row['PARENTID'], $row['PARENTNAME'], $row['PARENTTYPE'], $row['VALUES_TYPE']);
+				// 	$this->elements[$row['PARENTID']] = &$element;
+				// } /*else {
+				// 	$element = $this->elements[$row['PARENTID']];
+				// }*/
+
+				// if(!isset($this->elements[$row['CHILDID']])) {
+				// 	$child = new BusElement($row['CHILDID'], $row['CHILDNAME'], $row['CHILDTYPE'], $row['VALUES_TYPE']);
+				// 	$this->elements[$row['PARENTID']]->addChild($child);
+				// 	$this->elements[$row['CHILDID']] = $child;
+				// } /*else {
+				// 	$element = $this->elements[$row['CHILDID']];
+				// }*/
+			}
+		}
+
+		return $result;
+
+	}
+
 	/**
 	 * @return mixed
 	 */
 	public function loadElements() {
-		// THIS IS STILL TOO MUCH !!
+		// THIS IS STILL TOO MUCH !! killed webserver
 		// 		$select_t = 'SELECT DISTINCT o2.ID AS object_id, o2.NAME AS object_name, o2.IMAGE_PATH AS object_image,
 		// r3.order_num AS status_order, o3.ID AS status_id, o3.NAME AS status_name, o3.DESCRIPTION AS status_description, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range, o3.IS_REMOTABLE AS status_changeable
 		// FROM DPADD_OBJECT_RELATION r2
@@ -158,29 +253,29 @@ WHERE o0.NAME = "_DPAD_DBCONSTANT_GROUP_MAIN";';
 		// WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
 		// ORDER BY object_name, status_order ;';
 
-// geht a ned ! killed webserver
-		// $select_t = 'SELECT GROUP_CONCAT(r2.PARENTOBJ_ID) AS room_ids, o2.ID AS object_id, o2.NAME AS object_name,
+		// returns the same object for each room
+		// $select_t = 'SELECT r2.PARENTOBJ_ID as room_id, o2.ID AS object_id, o2.NAME AS object_name,
 		// o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range
 		// FROM DPADD_OBJECT_RELATION r2
 		// INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
 		// INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
 		// INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
 		// WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-		// GROUP BY object_id, object_name, status_id, status_name, status_value, status_range
 		// ORDER BY object_name;';
 
 		if (empty($this->main_group_ids)) {
 			throw new \Exception("No main group ids defined", 2019110623161);
 		}
 
-		$select_t = 'SELECT r2.PARENTOBJ_ID as room_id, o2.ID AS object_id, o2.NAME AS object_name,
-o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range
-FROM DPADD_OBJECT_RELATION r2
-INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
-INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
-INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
-WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
-ORDER BY object_name;';
+
+		$select_t = 'SELECT GROUP_CONCAT(r2.PARENTOBJ_ID) AS room_ids, o2.ID AS object_id, o2.NAME AS object_name,
+		o3.ID AS status_id, o3.NAME AS status_name, o3.CURRENT_VALUE AS status_value, o3.OPTIONALP AS status_range
+		FROM DPADD_OBJECT_RELATION r2
+		INNER JOIN DPADD_OBJECT o2 ON r2.CHILDOBJ_ID = o2.ID AND o2.type = "BYMEIDX" AND o2.values_type NOT IN ("CH_Clima", "CH_Scene")
+		INNER JOIN DPADD_OBJECT_RELATION r3 ON o2.ID = r3.PARENTOBJ_ID AND r3.RELATION_WEB_TIPOLOGY = "BYME_IDXOBJ_RELATION"
+		INNER JOIN DPADD_OBJECT o3 ON r3.CHILDOBJ_ID = o3.ID AND o3.type = "BYMEOBJ" AND o3.OPTIONALP IS NOT NULL
+		WHERE r2.PARENTOBJ_ID IN (%s) AND r2.RELATION_WEB_TIPOLOGY = "GENERIC_RELATION"
+		GROUP BY o2.ID, o2.NAME, o3.ID, o3.NAME, o3.CURRENT_VALUE, o3.OPTIONALP;';
 
 		$select = sprintf($select_t, $this->main_group_ids);
 

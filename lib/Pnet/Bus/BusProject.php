@@ -1,14 +1,14 @@
 <?php
 namespace Pnet\Bus;
 
-use Pnet\Bus\Model\BusElement;
 use Pnet\Bus\BusStatus;
+use Pnet\Bus\Model\BusElement;
 
 /**
  * BusProject
  * elements belong to a project
  *
- */Utiutisdfsdf asdfaagsdfasdfasd fsd
+ */
 class BusProject {
 	/**
 	 * @var array
